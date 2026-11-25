@@ -4,8 +4,8 @@
 # Chạy: bash <(curl -sSL https://raw.githubusercontent.com/tpofastconnect-max/ajax-monitor-bootstrap/main/bootstrap.sh)
 set -euo pipefail
 
-PRIVATE_REPO="tpofastconnect-max/ajax-monitor"
-BRANCH="master"
+PRIVATE_REPO=""   # đặt theo loại cài đặt ở BƯỚC 2
+BRANCH=""
 TOKEN_FILE="$HOME/.config/ajax-monitor/.gh_token"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
@@ -49,8 +49,22 @@ fi
 
 [ -z "$GH_TOKEN" ] && err "Token rỗng"
 
-# ── BƯỚC 2: Validate token ────────────────────────────────────────────────────
-step "BƯỚC 2 — Kiểm tra token với GitHub API"
+# ── BƯỚC 2: Chọn loại cài đặt ────────────────────────────────────────────────
+step "BƯỚC 2 — Chọn loại cài đặt"
+echo ""
+echo "  [B] Pi nhà / Dev  — cài đầy đủ, có git, research mode"
+echo "  [C] Pi khách      — production, kiosk hardening, ẩn tab Research"
+echo ""
+read -rp "  Chọn [B/C]: " INSTALL_TYPE
+
+case "${INSTALL_TYPE^^}" in
+  B) PRIVATE_REPO="tpofastconnect-max/ajax-monitor"; BRANCH="master"; SCRIPT_PATH="scripts/install.sh" ;;   # cần token có quyền kho mã nguồn
+  C) PRIVATE_REPO="tpofastconnect-max/ajax-monitor-releases"; BRANCH="main"; SCRIPT_PATH="install-customer.sh" ;;  # kho release: chỉ gói khách
+  *) err "Chỉ chấp nhận B hoặc C" ;;
+esac
+
+# ── BƯỚC 3: Validate token ────────────────────────────────────────────────────
+step "BƯỚC 3 — Kiểm tra token với GitHub API"
 
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer $GH_TOKEN" \
@@ -63,20 +77,6 @@ case "$HTTP_STATUS" in
   403) err "Token không có quyền truy cập repo $PRIVATE_REPO" ;;
   404) err "Không tìm thấy repo $PRIVATE_REPO — kiểm tra scope Contents: Read-only" ;;
   *)   err "GitHub API trả về HTTP $HTTP_STATUS — kiểm tra kết nối internet" ;;
-esac
-
-# ── BƯỚC 3: Chọn loại cài đặt ────────────────────────────────────────────────
-step "BƯỚC 3 — Chọn loại cài đặt"
-echo ""
-echo "  [B] Pi nhà / Dev  — cài đầy đủ, có git, research mode"
-echo "  [C] Pi khách      — production, kiosk hardening, ẩn tab Research"
-echo ""
-read -rp "  Chọn [B/C]: " INSTALL_TYPE
-
-case "${INSTALL_TYPE^^}" in
-  B) SCRIPT_PATH="scripts/install.sh" ;;
-  C) SCRIPT_PATH="scripts/install-customer.sh" ;;
-  *) err "Chỉ chấp nhận B hoặc C" ;;
 esac
 
 # ── BƯỚC 4: Tải installer về /tmp ────────────────────────────────────────────
